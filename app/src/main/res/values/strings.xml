@@ -1,3 +1,7 @@
 <resources>
     <string name="app_name">BKAP Weather</string>
+    <string name="field_city">Tỉnh thành</string>
+    <string name="field_note">Mô tả thời tiết</string>
+    <string name="field_temp">Nhiệt độ</string>
+    <string name="field_weather">Thời tiết</string>
 </resources>
