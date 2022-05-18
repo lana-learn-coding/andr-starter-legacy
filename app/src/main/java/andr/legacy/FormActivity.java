@@ -2,11 +2,11 @@ package andr.legacy;
 
 import android.os.Bundle;
 
-public class MainActivity extends NavigableActivity {
+public class FormActivity extends NavigableActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+        setContentView(R.layout.activity_form);
     }
 }
