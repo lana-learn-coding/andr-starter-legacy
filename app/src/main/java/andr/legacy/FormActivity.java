@@ -26,6 +26,7 @@ public class FormActivity extends NavigableActivity {
 
         dao = MainDatabase.getDbInstance(this).weatherDao();
         findViewById(R.id.btn_save).setOnClickListener(this::saveForm);
+        findViewById(R.id.btn_update).setOnClickListener(this::updateForm);
 
         MainApplication application = (MainApplication) getApplicationContext();
         ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, application.getWeathers());
@@ -37,10 +38,13 @@ public class FormActivity extends NavigableActivity {
     @Override
     protected void onResume() {
         super.onResume();
+
+        findViewById(R.id.btn_update).setVisibility(View.GONE);
         Bundle extras = ObjectUtils.defaultIfNull(getIntent().getExtras(), new Bundle());
         updateId = extras.getInt("id", -1);
         if (updateId < 0) return;
 
+        findViewById(R.id.btn_update).setVisibility(View.VISIBLE);
         Executors.newSingleThreadExecutor().execute(() -> {
             Weather item = dao.getOne(updateId);
             if (item == null) {
@@ -53,36 +57,49 @@ public class FormActivity extends NavigableActivity {
 
             // set value to form on update
             runOnUiThread(() -> {
-                FormUtils.setTextValue(findViewById(R.id.txt_city), item.getCity());
-                FormUtils.setTextValue(findViewById(R.id.txt_note), item.getNote());
-                FormUtils.setTextValue(findViewById(R.id.txt_temp), String.valueOf(ObjectUtils.defaultIfNull(item.getTemperature(), 0)));
+                FormUtils.setTextValue(findViewById(R.id.edit_txt_city), item.getCity());
+                FormUtils.setTextValue(findViewById(R.id.edit_txt_note), item.getNote());
+                FormUtils.setTextValue(findViewById(R.id.edit_txt_temp), String.valueOf(ObjectUtils.defaultIfNull(item.getTemperature(), 0)));
                 ((AutoCompleteTextView) findViewById(R.id.select_weather)).setText(item.getWeather(), false);
             });
         });
     }
 
     private void saveForm(View view) {
-        boolean isUpdate = updateId >= 0;
-        Weather weather = new Weather();
-        if (isUpdate) weather.setId(updateId);
+        Weather weather = getFormData();
 
+        Executors.newSingleThreadExecutor().execute(() -> {
+            dao.insert(weather);
+            runOnUiThread(() -> {
+                navigate(this, MainActivity.class);
+                Toast.makeText(this, "Thêm mới thời tiết thành công", Toast.LENGTH_SHORT).show();
+            });
+        });
+    }
+
+    private void updateForm(View view) {
+        if (updateId < 0) {
+            Toast.makeText(this, "Không thể cập nhật - chưa chọn bản ghi", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        Weather weather = getFormData();
+        weather.setId(updateId);
+
+        Executors.newSingleThreadExecutor().execute(() -> {
+            dao.update(weather);
+            runOnUiThread(() -> {
+                navigate(this, MainActivity.class);
+                Toast.makeText(this, "Cập nhật thời tiết thành công", Toast.LENGTH_SHORT).show();
+            });
+        });
+    }
+
+    private Weather getFormData() {
+        Weather weather = new Weather();
         weather.setCity(FormUtils.getTextValue(findViewById(R.id.edit_txt_city)));
         weather.setNote(FormUtils.getTextValue(findViewById(R.id.edit_txt_note)));
         weather.setTemperature(Integer.parseInt(StringUtils.defaultIfBlank(FormUtils.getTextValue(findViewById(R.id.edit_txt_temp)), "0")));
         weather.setWeather(FormUtils.getTextValue(findViewById(R.id.select_weather)));
-
-        Executors.newSingleThreadExecutor().execute(() -> {
-            if (isUpdate) {
-                dao.update(weather);
-            } else {
-                dao.insert(weather);
-            }
-
-            runOnUiThread(() -> {
-                String actionName = isUpdate ? "Cập nhật thời tiết" : "Thêm mới thời tiết";
-                navigate(this, MainActivity.class);
-                Toast.makeText(this, actionName + " thành công", Toast.LENGTH_SHORT).show();
-            });
-        });
+        return weather;
     }
 }
